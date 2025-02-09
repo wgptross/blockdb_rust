@@ -1,7 +1,7 @@
 //use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs::File;
-use std::io::{BufReader, Error, ErrorKind};
+use std::io::{self, BufReader, Error, ErrorKind, Write};
 
 fn ex() -> Result<Value, Error> {
     let file = File::open("./config/config.json")?;
@@ -14,17 +14,6 @@ fn ex() -> Result<Value, Error> {
     Ok(database.clone())
 }
 
-// fn read_json_file(path: &str) -> Result<Value, std::io::Error> {
-//     let file = File::open(path)?;
-//     let reader = BufReader::new(file);
-//     let json_data: Value = serde_json::from_reader(reader)?;
-//     let user = json_data
-//         .get("database")
-//         .ok_or_else(|| Error::new(ErrorKind::InvalidData, "error invalid"))?;
-//     //return json data
-//     Ok(user.clone())
-// }
-
 //this function takes databse Value and parses specific programed data to a string to be called in other functions
 fn parse_config(database: &Value) -> Result<String, Error> {
     if let Some(host) = database.get("location").and_then(Value::as_str) {
@@ -36,61 +25,42 @@ fn parse_config(database: &Value) -> Result<String, Error> {
     }
 }
 
-fn main() {
+fn get_config() -> Result<String, Error> {
     match ex() {
-        // match main ex witch reads orignal database values
-        // get these values and then match to the parse_config func
         Ok(database) => match parse_config(&database) {
-            Ok(host_str) => {
-                //string data now callable throughout program
-                println!("calling here {}", host_str)
+            Ok(location_str) => {
+                Ok(location_str)
+                //println!("{}", location_str)
             }
-            Err(err) => {
-                println!("error handle {}", err)
+            Err(..) => {
+                Err(Error::new(ErrorKind::NotFound, "not found in config {}"))
+                //println!("error handle for parsing config")
             }
         },
-        //handle error reading file
-        Err(err) => {
-            println!("error reading file {}", err)
+        Err(..) => {
+            Err(Error::new(ErrorKind::NotFound, "error cover Ex()"))
+            //println!("error cover")
         }
     }
+}
 
-    // match ex() {
-    //     Ok(database) => {
-    //         println!("database object found");
-    //         parse_config(&database);
-    //     }
-    //     Err(err) => {
-    //         println!("error reading or parsing config {}", err);
-    //     }
-    // }
+fn main() {
+    match get_config() {
+        Ok(location) => {
+            let x = location;
+            println!("{} call x", x)
+        }
+        Err(err) => {
+            println!("error handle {}", err);
+        }
+    }
+    let cont = true;
+    while cont {
+        print!("> ");
+        std::io::stdout().flush().unwrap();
+        let mut buffer = String::new();
+        let _ = std::io::stdin().read_line(&mut buffer);
 
-    // let ex = ex();
-
-    // println!("{:?}", ex);
-
-    // let json_file_path = "./config/config.json";
-
-    // match read_json_file(json_file_path) {
-    //     Ok(user) => match user.get("database") {
-    //         Some(database) => {
-    //             let location = database
-    //                 .get("location")
-    //                 .unwrap_or(&Value::Null)
-    //                 .as_str()
-    //                 .unwrap_or("unknown");
-
-    //             println!("location: {}", location);
-    //         }
-    //         None => {
-    //             println!("not found in table");
-    //         }
-    //     },
-    //     Err(e) => {
-    //         println!("error reading json {}", e)
-    //     }
-    // }
-    // // let x = read_json_file("./config/config.json");
-    // // println!("{:?}", x);
-    // //
+        println!("{}", buffer);
+    }
 }

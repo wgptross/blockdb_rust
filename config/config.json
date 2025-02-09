@@ -1,5 +1,6 @@
 {
   "database": {
-    "location": "./db/main"
+    "location": "./db/main",
+    "directory": "./db/"
   }
 }
