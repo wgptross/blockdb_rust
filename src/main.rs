@@ -1,7 +1,7 @@
 //use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs::File;
-use std::io::{self, BufReader, Error, ErrorKind, Write};
+use std::io::{BufReader, Error, ErrorKind, Write};
 
 fn ex() -> Result<Value, Error> {
     let file = File::open("./config/config.json")?;
@@ -12,6 +12,28 @@ fn ex() -> Result<Value, Error> {
         .ok_or_else(|| Error::new(ErrorKind::InvalidData, "error invalid"))?;
 
     Ok(database.clone())
+}
+
+
+struct BlockDB { 
+    databasefile: String, 
+}
+
+
+impl BlockDB { 
+    fn open(&self) -> &Self { 
+        println!("{} calling here", &self.databasefile);
+        &self
+    } 
+
+    fn put(&self, value: String, id: u32) { 
+        println!("{} calling put other: {} at {}", &self.databasefile, value, id);
+    }
+
+    fn get(&self, id: u32) { 
+        println!("searching {} for id:{}", self.databasefile, id);
+    }
+
 }
 
 //this function takes databse Value and parses specific programed data to a string to be called in other functions
@@ -48,7 +70,12 @@ fn main() {
     match get_config() {
         Ok(location) => {
             let x = location;
-            println!("{} call x", x)
+            println!("{} call x", x);
+            let database_caller = BlockDB {databasefile: x};
+            let database_main = BlockDB::open(&database_caller);
+            println!("{}", database_main.databasefile);
+            database_main.put(String::from("other"), 12);
+            database_main.get(12);
         }
         Err(err) => {
             println!("error handle {}", err);
