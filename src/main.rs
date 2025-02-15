@@ -1,8 +1,8 @@
 //use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs::File;
-use std::io::{BufReader, Error, ErrorKind, Write};
-
+use std::io::{BufReader, Error, ErrorKind};
+use std::path::Path;
 fn ex() -> Result<Value, Error> {
     let file = File::open("./config/config.json")?;
     let reader = BufReader::new(file);
@@ -14,26 +14,37 @@ fn ex() -> Result<Value, Error> {
     Ok(database.clone())
 }
 
-
-struct BlockDB { 
-    databasefile: String, 
+struct BlockDB {
+    databasefile: String,
 }
 
+fn write_to_path(path: &'static str) {
+    let path_input = Path::new(path);
 
-impl BlockDB { 
-    fn open(&self) -> &Self { 
+    let display = path_input.display();
+
+    let mut file = match File::open(&path_input) {
+        Err(why) => panic!("could not read {} {}", display, why),
+        Ok(file) => file,
+    };
+}
+
+impl BlockDB {
+    fn open(&self) -> &Self {
         println!("{} calling here", &self.databasefile);
         &self
-    } 
-
-    fn put(&self, value: String, id: u32) { 
-        println!("{} calling put other: {} at {}", &self.databasefile, value, id);
     }
 
-    fn get(&self, id: u32) { 
+    fn put(&self, value: String, id: u32) {
+        println!(
+            "{} calling put other: {} at {}",
+            &self.databasefile, value, id
+        );
+    }
+
+    fn get(&self, id: u32) {
         println!("searching {} for id:{}", self.databasefile, id);
     }
-
 }
 
 //this function takes databse Value and parses specific programed data to a string to be called in other functions
@@ -70,24 +81,15 @@ fn main() {
     match get_config() {
         Ok(location) => {
             let x = location;
-            println!("{} call x", x);
-            let database_caller = BlockDB {databasefile: x};
-            let database_main = BlockDB::open(&database_caller);
+
+            let database_call = BlockDB { databasefile: x };
+            let database_main = BlockDB::open(&database_call);
             println!("{}", database_main.databasefile);
-            database_main.put(String::from("other"), 12);
-            database_main.get(12);
+            database_call.put(String::from("this"), 12);
+            database_call.get(12);
         }
         Err(err) => {
-            println!("error handle {}", err);
+            println!("error handle file open {}", err);
         }
-    }
-    let cont = true;
-    while cont {
-        print!("> ");
-        std::io::stdout().flush().unwrap();
-        let mut buffer = String::new();
-        let _ = std::io::stdin().read_line(&mut buffer);
-
-        println!("{}", buffer);
     }
 }
