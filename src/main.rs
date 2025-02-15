@@ -1,8 +1,21 @@
 //use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fs::File;
+use std::fmt::Display;
+use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Error, ErrorKind};
 use std::path::Path;
+
+static LOREM_IPSUM: &str =
+    "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+";
+
+use std::io::prelude::*;
+
 fn ex() -> Result<Value, Error> {
     let file = File::open("./config/config.json")?;
     let reader = BufReader::new(file);
@@ -18,14 +31,37 @@ struct BlockDB {
     databasefile: String,
 }
 
-fn write_to_path(path: &'static str) {
-    let path_input = Path::new(path);
+fn write_to_db(db: &String, file: &str) {
+    let mut local_db = String::from(db);
+    local_db.push_str("/");
+    local_db.push_str(file);
 
-    let display = path_input.display();
+    let path = Path::new(&local_db);
+    let dis = path.display();
 
-    let mut file = match File::open(&path_input) {
-        Err(why) => panic!("could not read {} {}", display, why),
+    let mut file = match OpenOptions::new().create(true).append(true).open(&path) {
+        Err(why) => panic!("could not create {} {}", dis, why),
         Ok(file) => file,
+    };
+
+    match file.write("testing\n".as_bytes()) {
+        Err(why) => panic!("could not write {}, {}", dis, why),
+        Ok(_) => println!("success {}", dis),
+    };
+}
+
+fn test() {
+    let path = Path::new("testing.txt");
+    let display = path.display();
+
+    let mut file = match File::create(&path) {
+        Err(why) => panic!("could not create {}, {}", display, why),
+        Ok(file) => file,
+    };
+
+    match file.write_all(LOREM_IPSUM.as_bytes()) {
+        Err(why) => panic!("could not write to {}: {}", display, why),
+        Ok(_) => println!("success {}", display),
     };
 }
 
@@ -78,6 +114,8 @@ fn get_config() -> Result<String, Error> {
 }
 
 fn main() {
+    test();
+
     match get_config() {
         Ok(location) => {
             let x = location;
@@ -87,6 +125,8 @@ fn main() {
             println!("{}", database_main.databasefile);
             database_call.put(String::from("this"), 12);
             database_call.get(12);
+
+            write_to_db(&database_main.databasefile, "testing");
         }
         Err(err) => {
             println!("error handle file open {}", err);
