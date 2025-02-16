@@ -1,20 +1,21 @@
 //use serde::{Deserialize, Serialize};
+use rand::Rng;
 use serde_json::Value;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Error, ErrorKind};
 use std::path::Path;
 
-static LOREM_IPSUM: &str =
-    "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-";
+// static LOREM_IPSUM: &str =
+//     "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+// tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+// quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+// consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+// cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+// proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+// ";
 
 use std::io::prelude::*;
-
+//get config values
 fn ex() -> Result<Value, Error> {
     let file = File::open("./config/config.json")?;
     let reader = BufReader::new(file);
@@ -29,18 +30,23 @@ fn ex() -> Result<Value, Error> {
 struct BlockDB {
     databasefile: String,
 }
+//function to update the pointers for where db values are stored
+fn db_index_update(db: &String) {
+    let mut local_db = String::from(db);
+    local_db.push_str("/index");
 
-fn db_index_update(db: &String, index_id: u32) {
-    let local_db = String::from(db);
+    println!("{} db caller", local_db);
     let mut file = match OpenOptions::new().create(true).append(true).open(&local_db) {
         Err(why) => panic!("could no open index {}", why),
         Ok(file) => file,
     };
+    let mut rng = rand::rng();
+    let randvalue = rng.random::<u32>();
+    let index_id_ref = randvalue;
+    let mut index_insert_format = index_id_ref.to_string();
+    index_insert_format.push_str("\n");
 
-    let id = index_id.to_string();
-    let index_id_ref = &id;
-
-    match file.write(index_id_ref.as_bytes()) {
+    match file.write(index_insert_format.as_bytes()) {
         Err(why) => panic!("error writing {}", why),
         Ok(_) => println!("updated index"),
     };
@@ -51,53 +57,61 @@ fn db_index_update(db: &String, index_id: u32) {
 //     Int(u32),
 // }
 
+//write to db function - this is called in .put() impl
 fn write_to_db(db: &str, file: &str, value: &str, id: u32) {
+    //convert db str to local string and format string so It can access the folder
     let mut local_db = String::from(db);
+    //I may remove this and require a more strict config configuration
     local_db.push_str("/");
     local_db.push_str(file);
-
+    //define the path of the DB from the local_db format
     let path = Path::new(&local_db);
     let dis = path.display();
 
+    //open the file with create and append as true
     let mut file = match OpenOptions::new().create(true).append(true).open(&path) {
         Err(why) => panic!("could not create {} {}", dis, why),
         Ok(file) => file,
     };
 
+    //format the value variable from &str to local string
+    //also converting the ID to &str for insertion in the the file
     let mut value_format = String::from(value);
     let id_string = id.to_string();
     let s_slice: &str = &id_string[..];
-
+    value_format.push_str(" _ ");
+    //formatting the string
     value_format.push_str(s_slice);
     value_format.push_str("\n");
-
+    //writing the formatted string to the db file
     match file.write(value_format.as_bytes()) {
         Err(why) => panic!("could not write {}, {}", dis, why),
         Ok(_) => println!("success {}", dis),
     };
 }
 
-fn test() {
-    let path = Path::new("testing.txt");
-    let display = path.display();
+// fn test() {
+//     let path = Path::new("testing.txt");
+//     let display = path.display();
 
-    let mut file = match File::create(&path) {
-        Err(why) => panic!("could not create {}, {}", display, why),
-        Ok(file) => file,
-    };
+//     let mut file = match File::create(&path) {
+//         Err(why) => panic!("could not create {}, {}", display, why),
+//         Ok(file) => file,
+//     };
 
-    match file.write_all(LOREM_IPSUM.as_bytes()) {
-        Err(why) => panic!("could not write to {}: {}", display, why),
-        Ok(_) => println!("success {}", display),
-    };
-}
-
+//     match file.write_all(LOREM_IPSUM.as_bytes()) {
+//         Err(why) => panic!("could not write to {}: {}", display, why),
+//         Ok(_) => println!("success {}", display),
+//     };
+// }
+//block db caller impl
 impl BlockDB {
+    //open database and return self values
     fn open(&self) -> &Self {
         println!("{} calling here", &self.databasefile);
         &self
     }
-
+    //with database folder, file, value & id insert data into the database
     fn put(&self, database_location: &str, database_table: &str, value: &str, id: u32) {
         println!(
             "{} calling put other: {} at {}",
@@ -105,7 +119,7 @@ impl BlockDB {
         );
         write_to_db(database_location, database_table, "testing", id);
     }
-
+    //get data from the database with ID
     fn get(&self, id: u32) {
         println!("searching {} for id:{}", self.databasefile, id);
     }
@@ -142,7 +156,7 @@ fn get_config() -> Result<String, Error> {
 }
 
 fn main() {
-    test();
+    // test();
 
     match get_config() {
         Ok(location) => {
@@ -150,6 +164,9 @@ fn main() {
 
             let database_call = BlockDB { databasefile: x };
             let database_main = BlockDB::open(&database_call);
+
+            db_index_update(&database_main.databasefile);
+
             println!("{}", database_main.databasefile);
             database_call.put(&database_main.databasefile, "testing", "value", 13);
             database_call.get(12);
